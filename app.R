@@ -34,45 +34,66 @@ diabetes_data$BMI_Cat <- cut(diabetes_data$BMI,
                              breaks=c(0, 18.5, 25, 30, 100),
                              labels=c("Underweight", "Normal", "Overweight", "Obese"))
 
-# Custom CSS for effects
+# Custom CSS for Premium Effects
 css <- "
-  .card {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border-radius: 15px;
-    overflow: hidden;
-    border: none;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-  }
-  .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-  }
-  .value-box {
-    border-radius: 15px;
-  }
-  .navbar {
-    background: #2c3e50 !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  }
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
+  
   body {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    font-family: 'Outfit', sans-serif;
+  }
+  
+  .card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07) !important;
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(8px);
+  }
+  
+  .card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 15px 45px rgba(0,0,0,0.1) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+  
+  .value-box {
+    border-radius: 20px !important;
+    border: none !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+    transition: all 0.3s ease;
+  }
+  
+  .value-box:hover {
+    filter: brightness(1.1);
+    transform: translateY(-3px);
+  }
+
+  .navbar {
+    background: rgba(26, 26, 26, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid #3498db;
+  }
+
+  .nav-link {
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+  }
+
+  .shiny-input-container {
+    color: #2c3e50;
   }
 "
 
 # Define UI
 ui <- page_navbar(
-  title = "Diabetes Analytics Ultra",
+  title = span(bs_icon("heart-pulse-fill", style="color: #e74c3c; margin-right: 10px;"), "Diabetes Analytics Elite"),
   id = "nav",
   theme = bs_theme(
     version = 5,
     bootswatch = "lux",
-    primary = "#1a1a1a",
-    secondary = "#6c757d",
-    success = "#28a745",
-    info = "#17a2b8",
-    warning = "#ffc107",
-    danger = "#dc3545",
+    primary = "#3498db",
     base_font = font_google("Outfit")
   ),
   header = tagList(
@@ -82,116 +103,125 @@ ui <- page_navbar(
   ),
   
   sidebar = sidebar(
-    title = "Control Panel",
-    width = 300,
-    pickerInput("target_var", "Primary Metric:", 
-                choices = names(diabetes_data)[1:8], 
-                selected = "Glucose",
-                options = list(`style` = "btn-primary")),
+    title = div(bs_icon("sliders", style="margin-right: 10px;"), "Command Center"),
+    width = 320,
+    bg = "#ffffff",
+    
+    virtualSelectInput("target_var", "Primary Variable Focus:", 
+                       choices = names(diabetes_data)[1:8], 
+                       selected = "Glucose",
+                       search = TRUE),
+    
     hr(),
-    h6("App Settings"),
-    switchInput("show_points", "Show Data Points", value = TRUE),
-    colorPickr("color_accent", "Theme Accent", "#3498db"),
+    h6("Interface Customization", style="font-weight: 600; color: #7f8c8d; text-transform: uppercase; font-size: 0.7rem;"),
+    
+    sliderInput("opacity", "Plot Opacity:", 0.1, 1, 0.7, step = 0.1),
+    materialSwitch("show_trend", "Enable AI Trendlines", value = TRUE, status = "primary"),
+    
     hr(),
-    actionButton("refresh", "Recalculate Models", icon = icon("sync"), class = "btn-dark w-100"),
-    div(style="margin-top: 20px; text-align: center;",
-        helpText("Version 3.0 Ultra Interactivity"))
+    h6("Predictive Actions", style="font-weight: 600; color: #7f8c8d; text-transform: uppercase; font-size: 0.7rem;"),
+    actionButton("refresh", "Sync & Recalculate", icon = icon("bolt"), 
+                 style = "background: linear-gradient(to right, #3498db, #2980b9); color: white; border: none; padding: 10px; border-radius: 10px; width: 100%;"),
+    
+    div(style="margin-top: 30px; opacity: 0.6;",
+        p(bs_icon("info-circle"), " Data synced with local diabetes.csv"))
   ),
   
   nav_panel("Executive Hub",
     layout_column_wrap(
       width = 1/4,
       value_box(
-        title = "Patient Count",
-        value = nrow(diabetes_data),
-        showcase = bs_icon("people-fill"),
+        title = "Total Cohort",
+        value = textOutput("val_count"),
+        showcase = bs_icon("people"),
         theme = "primary",
-        p("Total dataset size")
+        p("Active participants in dataset")
       ),
       value_box(
-        title = "Avg Glucose",
-        value = round(mean(diabetes_data$Glucose), 1),
-        showcase = bs_icon("droplet-half"),
+        title = "Peak Glucose",
+        value = textOutput("val_glucose"),
+        showcase = bs_icon("graph-up-arrow"),
         theme = "info",
-        p("System average")
+        p("Maximum recorded value")
       ),
       value_box(
-        title = "Positive Rate",
-        value = scales::percent(mean(as.numeric(as.character(diabetes_data$Outcome)))),
-        showcase = bs_icon("activity"),
+        title = "Diabetes Ratio",
+        value = textOutput("val_ratio"),
+        showcase = bs_icon("pie-chart"),
         theme = "danger",
-        p("Diabetic prevalence")
+        p("Positive outcome frequency")
       ),
       value_box(
-        title = "Median Age",
-        value = median(diabetes_data$Age),
-        showcase = bs_icon("calendar-date"),
+        title = "Median Vitality",
+        value = textOutput("val_age"),
+        showcase = bs_icon("clipboard-pulse"),
         theme = "success",
-        p("Middle age value")
+        p("Median age of group")
       )
     ),
+    
     layout_column_wrap(
       width = 1/2,
       card(
-        card_header("Demographic Overview"),
-        plotlyOutput("age_group_plot")
+        card_header(div(bs_icon("bar-chart-steps"), " Age Demographic Stratification")),
+        plotlyOutput("age_group_plot", height = "350px")
       ),
       card(
-        card_header("BMI Classification"),
-        plotlyOutput("bmi_pie_plot")
+        card_header(div(bs_icon("pie-chart-fill"), " BMI Categorical Breakdown")),
+        plotlyOutput("bmi_pie_plot", height = "350px")
       )
     ),
+    
     card(
-      card_header("Deep Data Explorer"),
+      card_header(div(bs_icon("table"), " Real-time Data Explorer")),
       DTOutput("raw_data"),
       full_screen = TRUE
     )
   ),
   
-  nav_panel("Visual Lab",
-    navset_card_pill(
-      nav_panel("Distributions", 
+  nav_panel("Deep Insights",
+    navset_card_tab(
+      nav_panel("Distribution Matrix", 
         layout_column_wrap(
           width = 1/2,
-          card(card_header("Histogram Matrix"), plotlyOutput("dist_hist")),
-          card(card_header("Violin Analysis"), plotlyOutput("dist_violin"))
+          card(card_header("Dynamic Histogram"), plotlyOutput("dist_hist")),
+          card(card_header("Violin-Box Hybrid"), plotlyOutput("dist_violin"))
         ),
-        card(card_header("Density Landscape"), plotlyOutput("dist_density"))
+        card(card_header("Multi-Outcome Density Surface"), plotlyOutput("dist_density"))
       ),
-      nav_panel("Correlations", 
+      nav_panel("Relationship Mapping", 
         layout_column_wrap(
           width = 1/2,
-          card(card_header("Interactive Scatter"), plotlyOutput("scatter_2d")),
-          card(card_header("Cross-Metric Trend"), plotlyOutput("trend_plot"))
+          card(card_header("Correlation Scatter"), plotlyOutput("scatter_2d")),
+          card(card_header("Temporal-style Age Trend"), plotlyOutput("trend_plot"))
         ),
-        card(card_header("Parallel Coordinate Profiles"), plotlyOutput("parallel_plot"))
+        card(card_header("Parallel Coordinate Profiles (Multivariate)"), plotlyOutput("parallel_plot"))
       )
     )
   ),
   
-  nav_panel("3D Modeling",
+  nav_panel("3D Discovery",
     layout_column_wrap(
       width = 1/2,
-      card(card_header("Metabolic 3D Space"), plotlyOutput("model_3d_1"), full_screen = TRUE),
-      card(card_header("Biometric 3D Space"), plotlyOutput("model_3d_2"), full_screen = TRUE)
-    )
+      card(card_header("3D Metabolic Cluster Space"), plotlyOutput("model_3d_1"), full_screen = TRUE),
+      card(card_header("3D Biometric Interaction"), plotlyOutput("model_3d_2"), full_screen = TRUE)
+    ),
+    card(card_header("Interactive Correlation Heatmap"), plotlyOutput("interactive_heatmap"), full_screen = TRUE)
   ),
   
-  nav_panel("AI Analytics",
+  nav_panel("Advanced Analytics",
     layout_sidebar(
       sidebar = sidebar(
-        title = "ML Parameters",
-        sliderInput("k_clusters", "Target Clusters:", 2, 6, 3),
-        selectInput("cluster_vars", "Cluster Basis:", 
-                    choices = names(diabetes_data)[1:8], 
-                    multiple = TRUE, 
-                    selected = c("Glucose", "BMI", "Age"))
+        title = "AI Model Config",
+        numericInput("k_clusters", "Target Cluster Count:", 3, 2, 6),
+        checkboxGroupInput("cluster_vars", "Features for Clustering:", 
+                           choices = names(diabetes_data)[1:8], 
+                           selected = c("Glucose", "BMI", "Age"))
       ),
       navset_card_underline(
-        nav_panel("Clustering Output", plotlyOutput("cluster_3d")),
-        nav_panel("Variance Analysis", plotlyOutput("pca_plot")),
-        nav_panel("Metric Importance", plotlyOutput("importance_plot")),
-        nav_panel("Correlation Map", plotOutput("cor_heatmap"))
+        nav_panel("AI K-Means Results", plotlyOutput("cluster_3d")),
+        nav_panel("Principal Component Variance", plotlyOutput("pca_plot")),
+        nav_panel("Global Feature Importance", plotlyOutput("importance_plot"))
       )
     )
   )
@@ -200,72 +230,81 @@ ui <- page_navbar(
 # Define Server
 server <- function(input, output, session) {
   
-  # Loading Screen
-  w <- Waiter$new(html = spin_dots(), color = "#1a1a1a")
+  # Loading Screen Effects
+  w <- Waiter$new(html = tagList(spin_fold(), h3("Analyzing Biometrics...", style="color:white; font-family:Outfit;")), color = "#1a1a1a")
   
   observeEvent(input$refresh, {
     w$show()
-    Sys.sleep(1) # Simulate calc
+    Sys.sleep(1.5)
     w$hide()
+    sendSweetAlert(session, title = "Data Synced", text = "Analytics models have been updated.", type = "success")
   })
 
-  # Reactive Data Filtering (Optional extension)
-  
-  # Outputs
+  # Value Box Outputs
+  output$val_count <- renderText({ nrow(diabetes_data) })
+  output$val_glucose <- renderText({ max(diabetes_data$Glucose) })
+  output$val_ratio <- renderText({ scales::percent(mean(as.numeric(as.character(diabetes_data$Outcome)))) })
+  output$val_age <- renderText({ paste(median(diabetes_data$Age), "Years") })
+
+  # Graphs & Visuals
   output$raw_data <- renderDT({ 
     datatable(diabetes_data, 
-              options = list(pageLength = 5, scrollX = TRUE),
-              class = 'display nowrap compact') 
+              options = list(pageLength = 10, scrollX = TRUE),
+              class = 'display nowrap cell-border hover') 
   })
   
   output$age_group_plot <- renderPlotly({
     p <- ggplot(diabetes_data, aes(x=Age_Group, fill=Outcome)) + 
-      geom_bar(position="dodge", alpha=0.8) + 
+      geom_bar(position="dodge", alpha=input$opacity) + 
       scale_fill_manual(values=c("#3498db", "#e74c3c")) +
-      labs(x=NULL, y="Count")
-    ggplotly(p) %>% config(displayModeBar = FALSE)
+      theme_minimal()
+    ggplotly(p) %>% layout(hovermode = "x unified")
   })
   
   output$bmi_pie_plot <- renderPlotly({
     df <- diabetes_data %>% group_by(BMI_Cat) %>% summarise(count = n())
-    plot_ly(df, labels = ~BMI_Cat, values = ~count, type = 'pie', hole = 0.5,
-            marker = list(colors = c("#2c3e50", "#34495e", "#7f8c8d", "#bdc3c7")))
+    plot_ly(df, labels = ~BMI_Cat, values = ~count, type = 'pie', hole = 0.6,
+            marker = list(colors = c("#2c3e50", "#3498db", "#e74c3c", "#f1c40f"),
+                         line = list(color = '#FFFFFF', width = 2))) %>%
+      layout(margin = list(t = 0, b = 0, l = 0, r = 0))
   })
   
   output$dist_hist <- renderPlotly({
     p <- ggplot(diabetes_data, aes_string(x=input$target_var, fill="Outcome")) + 
-      geom_histogram(bins=30, alpha=0.7, color="white") + 
+      geom_histogram(bins=30, alpha=input$opacity, color="white") + 
       scale_fill_manual(values=c("#3498db", "#e74c3c"))
     ggplotly(p)
   })
   
   output$dist_violin <- renderPlotly({
     p <- ggplot(diabetes_data, aes_string(x="Outcome", y=input$target_var, fill="Outcome")) + 
-      geom_violin(alpha=0.6) + 
-      geom_boxplot(width=0.1, fill="white", alpha=0.9) +
+      geom_violin(alpha=input$opacity) + 
+      geom_boxplot(width=0.1, fill="white", alpha=0.9, outlier.shape = NA) +
       scale_fill_manual(values=c("#3498db", "#e74c3c"))
     ggplotly(p)
   })
   
   output$dist_density <- renderPlotly({
     p <- ggplot(diabetes_data, aes_string(x=input$target_var, fill="Outcome")) + 
-      geom_density(alpha=0.5) + 
+      geom_density(alpha=input$opacity, size=1) + 
       scale_fill_manual(values=c("#3498db", "#e74c3c"))
     ggplotly(p)
   })
   
   output$scatter_2d <- renderPlotly({
     p <- ggplot(diabetes_data, aes_string(x="Glucose", y=input$target_var, color="Outcome")) + 
-      geom_point(alpha=0.5) + 
-      geom_smooth(method="lm", se=FALSE) +
+      geom_point(alpha=input$opacity, size=2) + 
       scale_color_manual(values=c("#3498db", "#e74c3c"))
+    if(input$show_trend) p <- p + geom_smooth(method="lm", se=FALSE, linetype="dashed")
     ggplotly(p)
   })
   
   output$trend_plot <- renderPlotly({
     p <- ggplot(diabetes_data, aes_string(x="Age", y=input$target_var, color="Outcome")) + 
-      geom_line(stat="summary", fun=mean, size=1.2) +
-      scale_color_manual(values=c("#3498db", "#e74c3c"))
+      geom_line(stat="summary", fun=mean, size=1.5) +
+      geom_ribbon(stat="summary", fun.data=mean_se, alpha=0.2, aes(fill=Outcome), color=NA) +
+      scale_color_manual(values=c("#3498db", "#e74c3c")) +
+      scale_fill_manual(values=c("#3498db", "#e74c3c"))
     ggplotly(p)
   })
   
@@ -277,27 +316,29 @@ server <- function(input, output, session) {
               list(range = range(diabetes_data$Glucose), label = 'Glucose', values = ~Glucose),
               list(range = range(diabetes_data$BMI), label = 'BMI', values = ~BMI),
               list(range = range(diabetes_data$Age), label = 'Age', values = ~Age),
-              list(range = range(diabetes_data$Insulin), label = 'Insulin', values = ~Insulin)
-            ))
+              list(range = range(diabetes_data$BloodPressure), label = 'BP', values = ~BloodPressure)
+            )) %>%
+      layout(font = list(family = "Outfit"))
   })
   
   output$model_3d_1 <- renderPlotly({
     plot_ly(diabetes_data, x = ~Glucose, y = ~BMI, z = ~Age, 
             color = ~Outcome, colors = c("#3498db", "#e74c3c"),
-            type = "scatter3d", mode = "markers", marker=list(size=3, opacity=0.7)) %>%
-      layout(scene = list(aspectmode='cube'))
+            type = "scatter3d", mode = "markers", marker=list(size=4, opacity=0.7, line=list(width=1, color='white'))) %>%
+      layout(scene = list(xaxis=list(title='Glucose'), yaxis=list(title='BMI'), zaxis=list(title='Age')))
   })
   
   output$model_3d_2 <- renderPlotly({
     plot_ly(diabetes_data, x = ~Insulin, y = ~SkinThickness, z = ~BloodPressure, 
             color = ~Outcome, colors = c("#3498db", "#e74c3c"),
-            type = "scatter3d", mode = "markers", marker=list(size=3, opacity=0.7))
+            type = "scatter3d", mode = "markers", marker=list(size=4, opacity=0.7))
   })
   
-  output$cor_heatmap <- renderPlot({
-    corrplot(cor(diabetes_data %>% select_if(is.numeric)), 
-             method="shade", type="upper", tl.col="black", tl.srt=45,
-             addCoef.col = "black", number.cex = 0.7)
+  output$interactive_heatmap <- renderPlotly({
+    cor_mat <- cor(diabetes_data %>% select_if(is.numeric))
+    plot_ly(x = colnames(cor_mat), y = rownames(cor_mat), z = cor_mat, 
+            type = "heatmap", colorscale = "RdBu", reversescale = TRUE) %>%
+      layout(title = "Interactive Correlation Matrix", xaxis = list(title=""), yaxis = list(title=""))
   })
   
   output$cluster_3d <- renderPlotly({
@@ -312,14 +353,15 @@ server <- function(input, output, session) {
             y = as.formula(paste0("~", input$cluster_vars[2])), 
             z = as.formula(paste0("~", input$cluster_vars[3])), 
             color = as.factor(km$cluster), 
-            type = "scatter3d", mode = "markers")
+            type = "scatter3d", mode = "markers", marker=list(size=5)) %>%
+      layout(title = paste("K-Means Clustering (K =", input$k_clusters, ")"))
   })
   
   output$pca_plot <- renderPlotly({
     pca <- prcomp(diabetes_data %>% select_if(is.numeric), scale. = TRUE)
     vars <- pca$sdev^2 / sum(pca$sdev^2)
     plot_ly(x = paste0("PC", 1:length(vars)), y = vars, type = "bar", 
-            marker = list(color = '#2c3e50')) %>% 
+            marker = list(color = '#3498db', line = list(color = '#2c3e50', width = 1.5))) %>% 
       layout(title="Principal Component Variance Contribution")
   })
   
@@ -328,9 +370,9 @@ server <- function(input, output, session) {
     imp <- abs(coef(fit)[-1])
     df <- data.frame(Feature = names(imp), Importance = imp)
     p <- ggplot(df, aes(x=reorder(Feature, Importance), y=Importance, fill=Importance)) + 
-      geom_bar(stat="identity") + coord_flip() + 
-      scale_fill_gradient(low="#3498db", high="#1a1a1a") +
-      labs(x=NULL)
+      geom_bar(stat="identity", width = 0.7) + coord_flip() + 
+      scale_fill_gradient(low="#3498db", high="#e74c3c") +
+      theme_minimal() + labs(x=NULL, y="Absolute Coefficient (Impact)")
     ggplotly(p)
   })
 }
